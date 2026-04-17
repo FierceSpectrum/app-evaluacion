@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sistema de evaluación de candidatos a Tesorero-Contador — Junta de Educación" />
+  <title>Evaluación Tesorero-Contador · Junta de Educación</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════
+       LOADING OVERLAY
+  ════════════════════════════════════════ -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Iniciando aplicación...</p>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       TOAST CONTAINER
+  ════════════════════════════════════════ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="brand-icon">🏫</div>
+        <div>
+          <div class="brand-title">Junta de Educación</div>
+          <div class="brand-sub">Sistema de Evaluación · Tesorero-Contador</div>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-btn active" id="nav-dashboard" onclick="showPage('dashboard')">
+          <span>📋</span> <span class="nav-label">Candidatos</span>
+        </button>
+        <button class="nav-btn" id="nav-results" onclick="showPage('results')">
+          <span>🏆</span> <span class="nav-label">Resultados</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════
+       FIREBASE ERROR BANNER
+  ════════════════════════════════════════ -->
+  <div id="firebase-error-banner" class="firebase-error-banner"></div>
+
+  <!-- ════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ── Dashboard ────────────────────────── -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <div>
+          <h2>Lista de Candidatos</h2>
+          <div class="page-header-meta" id="dashboard-meta"></div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddCandidateModal()">
+          + Agregar Candidato
+        </button>
+      </div>
+      <div id="candidates-container" class="candidates-grid">
+        <!-- Candidatos se renderizan aquí via JS -->
+      </div>
+    </div>
+
+    <!-- ── Resultados ────────────────────────── -->
+    <div id="page-results" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Resultados Finales</h2>
+          <div class="page-header-meta">Ranking de candidatos por puntaje total</div>
+        </div>
+        <button class="btn btn-secondary" onclick="renderResults()">
+          🔄 Actualizar
+        </button>
+      </div>
+      <div id="results-container">
+        <!-- Resultados se renderizan aquí via JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ════════════════════════════════════════
+       MODAL: AGREGAR CANDIDATO
+  ════════════════════════════════════════ -->
+  <div id="modal-add" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-add-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-add-title">Agregar Candidato</h3>
+          <div class="modal-header-sub">Ingrese los datos básicos del candidato</div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-add')" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="input-nombre">Nombre completo</label>
+          <input class="form-control" type="text" id="input-nombre"
+            placeholder="Ej. María González Rodríguez" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-cedula">Cédula de identidad</label>
+          <input class="form-control" type="text" id="input-cedula"
+            placeholder="Ej. 1-1234-5678" autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-add')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveNewCandidate()">✔ Guardar Candidato</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       MODAL: REQUISITOS EXCLUYENTES
+  ════════════════════════════════════════ -->
+  <div id="modal-requirements" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-req-title">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-req-title">Verificación de Requisitos Excluyentes</h3>
+          <div class="modal-header-sub">Marque cada requisito que el candidato cumple</div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-requirements')" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Banner candidato -->
+        <div id="req-candidate-info"></div>
+
+        <p class="req-intro">
+          Todos los requisitos deben estar marcados para continuar.
+          Si falta alguno, el candidato queda <strong>descalificado</strong> y no aparecerá en el ranking final.
+        </p>
+
+        <!-- Lista de requisitos -->
+        <div id="req-checklist" class="req-list">
+          <!-- Se genera dinámicamente desde config.json -->
+        </div>
+
+        <!-- Estado de requisitos -->
+        <div id="req-status"></div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-requirements')">Cerrar</button>
+        <button class="btn btn-danger" id="btn-disqualify" onclick="disqualifyCandidate()" style="display:none">
+          ❌ Guardar como Descalificado
+        </button>
+        <button class="btn btn-primary" id="btn-continue" disabled onclick="openEvaluationModal()">
+          Continuar a Evaluación →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       MODAL: EVALUACIÓN DE PUNTAJE
+  ════════════════════════════════════════ -->
+  <div id="modal-evaluation" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-eval-title">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-eval-title">Evaluación de Puntaje</h3>
+          <div class="modal-header-sub">Complete los cuatro criterios de evaluación</div>
+        </div>
+        <button class="modal-close" onclick="confirmCloseEvaluation()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Banner candidato -->
+        <div id="eval-candidate-info"></div>
+
+        <!-- Criterios (generados dinámicamente) -->
+        <div id="criteria-container"></div>
+
+        <!-- Total -->
+        <div class="total-score-card">
+          <span class="total-score-label">Puntaje Total Calculado</span>
+          <span>
+            <span class="total-score-val" id="total-score-display">0.00</span>
+            <span class="total-score-max"> / 100</span>
+          </span>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="confirmCloseEvaluation()">Cancelar</button>
+        <button class="btn btn-success" onclick="saveEvaluation()">💾 Guardar Evaluación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       MODAL: DETALLE DE EVALUACIÓN
+  ════════════════════════════════════════ -->
+  <div id="modal-detail" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-detail-title">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-detail-title">Detalle de Evaluación</h3>
+          <div class="modal-header-sub">Desglose de puntajes por criterio</div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-detail')" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body" id="detail-body">
+        <!-- Contenido generado dinámicamente -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-detail')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       MODAL: CONFIRMACIÓN GENÉRICA
+  ════════════════════════════════════════ -->
+  <div id="modal-confirm" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="confirm-title">Confirmar acción</h3>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-msg" id="confirm-msg"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="confirm-cancel">Cancelar</button>
+        <button class="btn btn-primary"   id="confirm-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════ -->
+  <!-- Firebase SDK (compat v9) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <!-- Configuración Firebase (usuario debe editar este archivo) -->
+  <script src="firebase-config.js"></script>
+
+  <!-- Lógica principal -->
+  <script src="app.js"></script>
+
+</body>
+</html>

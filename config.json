@@ -1,0 +1,50 @@
+{
+  "criterios": {
+    "formacion": {
+      "peso_maximo": 20,
+      "opciones": [
+        { "texto": "Diplomado o Técnico Medio", "porcentaje_default": 10 },
+        { "texto": "Bachillerato", "porcentaje_default": 15 },
+        { "texto": "Licenciatura o Superior", "porcentaje_default": 20 },
+        { "texto": "Otros", "porcentaje_default": 0, "permite_texto": true }
+      ]
+    },
+    "capacitacion": {
+      "peso_maximo": 15,
+      "opciones": [
+        { "texto": "1 hora disponible", "porcentaje_default": 10 },
+        { "texto": "2 horas disponibles", "porcentaje_default": 12.5 },
+        { "texto": "3 horas o más", "porcentaje_default": 15 },
+        { "texto": "Otro", "porcentaje_default": 0, "permite_texto": true }
+      ]
+    },
+    "precio": {
+      "peso_maximo": 40,
+      "calculo_automatico": true
+    },
+    "experiencia": {
+      "peso_maximo": 25,
+      "opciones": [
+        { "texto": "Menos de 1 año", "porcentaje_default": 0 },
+        { "texto": "1 año", "porcentaje_default": 5 },
+        { "texto": "2 años", "porcentaje_default": 10 },
+        { "texto": "3 años", "porcentaje_default": 15 },
+        { "texto": "4 años", "porcentaje_default": 17 },
+        { "texto": "5 años", "porcentaje_default": 19 },
+        { "texto": "6 años", "porcentaje_default": 20 },
+        { "texto": "7 años", "porcentaje_default": 22 },
+        { "texto": "8 años", "porcentaje_default": 24 },
+        { "texto": "9 años o más", "porcentaje_default": 25 }
+      ]
+    }
+  },
+  "requisitos_excluyentes": [
+    "Sobre cerrado, foliado y firmado (3.1.1/3.1.2)",
+    "Copia cédula + hoja delincuencia vigente",
+    "Título Contador + Certif. Colegio activo",
+    "CCSS y FODESAF al día",
+    "Declaraciones juradas (art.22, 20.6, etc.)",
+    "Póliza fidelidad + riesgos de trabajo",
+    "Experiencia mínima 3 años en juntas (INDISPENSABLE)"
+  ]
+}
