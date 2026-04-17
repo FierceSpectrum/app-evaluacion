@@ -182,7 +182,7 @@ async function saveEvaluation() {
     showToast(`Evaluación de ${data.nombre} guardada (${ev.puntaje_total.toFixed(2)} pts)`, 'success');
     await loadCandidates();
     // Recalcular precios de otros candidatos si es necesario
-    await checkPriceRecalculation(id, ev.precio.monto);
+    // await checkPriceRecalculation(id, ev.precio.monto);
   } catch (err) {
     showToast('Error al guardar evaluación: ' + err.message, 'error');
   } finally {
@@ -290,7 +290,9 @@ function renderCandidateCard(c) {
 
   let actionBtn = '';
   if (estado === 'descalificado') {
-    actionBtn = `<button class="btn btn-secondary btn-sm" disabled>❌ Descalificado</button>`;
+    actionBtn = `
+      <button class="btn btn-outline-primary btn-sm" onclick="reEvaluateDescalificado('${c.id}')">🔄 Re-evaluar</button>
+      <button class="btn btn-secondary btn-sm" onclick="openDetailModal('${c.id}')" ${c.evaluacion ? '' : 'disabled'}>🔍 Ver detalle</button>`;
   } else if (estado === 'evaluado') {
     actionBtn = `
       <button class="btn btn-outline-primary btn-sm" onclick="openRequirementsModal('${c.id}', 1)">✏️ Re-evaluar</button>
@@ -354,6 +356,27 @@ async function openRequirementsModal(candidateId, isReeval) {
   renderRequirements();
 
   openModal('modal-requirements');
+}
+
+async function reEvaluateDescalificado(candidateId) {
+  const ok = await confirm2('Re-evaluar candidato', 'Este candidato estaba descalificado. Al re-evaluar se borrará su estado anterior y podrá volver a pasar por requisitos y evaluación. ¿Continuar?', 'Sí, re-evaluar', 'btn-primary');
+  if (!ok) return;
+  
+  showLoading(true, 'Reiniciando candidato...');
+  try {
+    await db.collection('candidatos').doc(candidateId).update({
+      estado: 'pendiente',
+      evaluacion: firebase.firestore.FieldValue.delete(),
+      requisitos_excluyentes: firebase.firestore.FieldValue.delete(),
+      fecha_evaluacion: firebase.firestore.FieldValue.delete()
+    });
+    showToast('Candidato reiniciado. Ya puede evaluarlo nuevamente.', 'success');
+    await loadCandidates();
+  } catch (err) {
+    showToast('Error al reiniciar: ' + err.message, 'error');
+  } finally {
+    showLoading(false);
+  }
 }
 
 function renderRequirements() {
@@ -436,7 +459,7 @@ function initEvaluationData(cand) {
     state.evaluationData = {
       formacion:    { opcion: '', porcentaje_asignado: 0, puntaje_ponderado: 0, otro_texto: '' },
       capacitacion: { opcion: '', porcentaje_asignado: 0, puntaje_ponderado: 0, otro_texto: '' },
-      precio:       { monto: null, porcentaje_asignado: 0, puntaje_ponderado: 0, es_manual: false },
+      precio:       { monto: 1300000, porcentaje_asignado: 40, puntaje_ponderado: 40, es_manual: false },
       experiencia:  { opcion: '', porcentaje_asignado: 0, puntaje_ponderado: 0 }
     };
   }
@@ -490,10 +513,10 @@ function renderFormacionCriterion(cfg, val) {
         </div>
         <div class="criterion-row">
           <div class="form-group">
-            <label class="form-label">Porcentaje asignado (máx. ${peso}%)</label>
+            <label class="form-label">Puntaje asignado (máx. ${peso} pts)</label>
             <div class="pct-input-group">
               <input class="form-control" type="number" id="crit-formacion-pct" min="0" max="${peso}" step="0.5" value="${curPct}" onchange="onPctManualChange('formacion', ${peso})" oninput="onPctManualChange('formacion', ${peso})" />
-              <span class="pct-symbol">%</span>
+              <span class="pct-symbol">pts</span>
             </div>
           </div>
           <div class="criterion-score-row" style="margin-top:auto">
@@ -534,10 +557,10 @@ function renderCapacitacionCriterion(cfg, val) {
         </div>
         <div class="criterion-row">
           <div class="form-group">
-            <label class="form-label">Porcentaje asignado (máx. ${peso}%)</label>
+            <label class="form-label">Puntaje asignado (máx. ${peso} pts)</label>
             <div class="pct-input-group">
               <input class="form-control" type="number" id="crit-capacitacion-pct" min="0" max="${peso}" step="0.5" value="${curPct}" onchange="onPctManualChange('capacitacion', ${peso})" oninput="onPctManualChange('capacitacion', ${peso})" />
-              <span class="pct-symbol">%</span>
+              <span class="pct-symbol">pts</span>
             </div>
           </div>
           <div class="criterion-score-row" style="margin-top:auto">
@@ -558,24 +581,24 @@ function renderPrecioCriterion(cfg, val, minPrice) {
     <div class="criterion-card">
       <div class="criterion-header">
         <h4><span class="criterion-letter">C</span> Precio Cotizado</h4>
-        <span class="criterion-weight">Peso máx. ${peso}%</span>
+        <span class="criterion-weight">Peso máx. ${peso} pts</span>
       </div>
       <div class="criterion-body">
         <div class="form-group">
           <label class="form-label">Monto cotizado (₡ colones)</label>
-          <input class="form-control" type="number" id="crit-precio-monto" min="1" step="1" placeholder="Ej. 1300000" value="${val.monto || ''}" oninput="onMontoChange()" />
+          <input class="form-control" type="number" id="crit-precio-monto" min="1" step="1" placeholder="Ej. 1300000" value="${val.monto || ''}" />
           <span class="form-hint">Ingrese el monto total de la propuesta económica</span>
         </div>
         <div class="criterion-row">
           <div class="form-group">
-            <label class="form-label">Porcentaje asignado (máx. ${peso}%)</label>
+            <label class="form-label">Puntaje asignado (máx. ${peso} pts)</label>
             <div class="pct-input-group">
               <input class="form-control" type="number" id="crit-precio-pct" min="0" max="${peso}" step="0.5" value="${curPct}" onchange="onPctManualChange('precio', ${peso})" oninput="onPctManualChange('precio', ${peso})" />
-              <span class="pct-symbol">%</span>
+              <span class="pct-symbol">pts</span>
             </div>
           </div>
           <div class="criterion-score-row" style="margin-top:auto">
-            <span class="criterion-score-label">Puntaje ponderado</span>
+            <span class="criterion-score-label">Puntaje parcial</span>
             <span class="criterion-score-val" id="crit-precio-score">${curScore.toFixed(2)}</span>
           </div>
         </div>
@@ -607,10 +630,10 @@ function renderExperienciaCriterion(cfg, val) {
         </div>
         <div class="criterion-row">
           <div class="form-group">
-            <label class="form-label">Porcentaje asignado (máx. ${peso}%)</label>
+            <label class="form-label">Puntaje asignado (máx. ${peso} pts)</label>
             <div class="pct-input-group">
               <input class="form-control" type="number" id="crit-experiencia-pct" min="0" max="${peso}" step="0.5" value="${curPct}" onchange="onPctManualChange('experiencia', ${peso})" oninput="onPctManualChange('experiencia', ${peso})" />
-              <span class="pct-symbol">%</span>
+              <span class="pct-symbol">pts</span>
             </div>
           </div>
           <div class="criterion-score-row" style="margin-top:auto">
@@ -719,10 +742,11 @@ function updateCriterionScore(criterio, pesoMax) {
   let pct = parseFloat(pctInput.value) || 0;
   if (pct > pesoMax) {
     pct = pesoMax;
-    pctInput.value = pesoMax;   // 👈 Corrige el valor mostrado
+    pctInput.value = pesoMax;
   }
   if (pct < 0) pct = 0;
-  const score = (pct / 100) * pesoMax;
+  // El puntaje ponderado es directamente el valor ingresado (limitado al peso máximo)
+  const score = pct;
   scoreEl.textContent = score.toFixed(2);
   updateTotalScore();
 }
@@ -776,16 +800,16 @@ function readEvaluationForm() {
   const ePeso  = cfg.experiencia.peso_maximo;
   if (!eSel.value) { showToast('Seleccione una opción en Experiencia', 'error'); return null; }
 
-  const fScore = (Math.min(fPct, fPeso) / 100) * fPeso;
-  const cScore = (Math.min(cPct, cPeso) / 100) * cPeso;
-  const pScore = (Math.min(pPct, pPeso) / 100) * pPeso;
-  const eScore = (Math.min(ePct, ePeso) / 100) * ePeso;
+  const fScore = Math.min(fPct, fPeso);
+  const cScore = Math.min(cPct, cPeso);
+  const pScore = Math.min(pPct, pPeso);
+  const eScore = Math.min(ePct, ePeso);
   const total  = fScore + cScore + pScore + eScore;
 
   return {
     formacion:    { opcion: fSel.value, porcentaje_asignado: fPct, puntaje_ponderado: parseFloat(fScore.toFixed(4)), otro_texto: fOtro },
     capacitacion: { opcion: cSel.value, porcentaje_asignado: cPct, puntaje_ponderado: parseFloat(cScore.toFixed(4)), otro_texto: cOtro },
-    precio:       { monto: pMonto,      porcentaje_asignado: pPct, puntaje_ponderado: parseFloat(pScore.toFixed(4)), es_manual: pManu },
+    precio:       { monto: pMonto, porcentaje_asignado: pPct, puntaje_ponderado: parseFloat(pScore.toFixed(4)) },
     experiencia:  { opcion: eSel.value, porcentaje_asignado: ePct, puntaje_ponderado: parseFloat(eScore.toFixed(4)) },
     puntaje_total: parseFloat(total.toFixed(4))
   };
